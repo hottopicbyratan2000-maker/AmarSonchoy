@@ -1,6 +1,6 @@
 {
-  "name": "AmarSanchay",
-  "short_name": "AmarSanchay",
+  "name": "AmarSonchoy",
+  "short_name": "AmarSonchoy",
   "description": "ঋণমুক্ত স্বাধীন জীবন, সঞ্চয়েই স্বপ্ন পূরণ",
   "lang": "bn",
   "start_url": "/",
@@ -8,12 +8,32 @@
   "id": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#071430",
+  "background_color": "#ffffff",
   "theme_color": "#071430",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
