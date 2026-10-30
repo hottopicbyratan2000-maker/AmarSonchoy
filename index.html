@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AmarSonchoy</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#071430">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AmarSonchoy">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<style>
+  html, body { margin: 0; height: 100%; background: #071430; overflow: hidden; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #071430; }
+</style>
+</head>
+<body>
+<iframe id="app" title="AmarSonchoy"
+  allow="camera *; microphone *; clipboard-write *; clipboard-read *; fullscreen *; geolocation *"></iframe>
+<script>
+/* ================== শুধু এই একটি লাইন বদলাতে হবে ==================
+   Apps Script "Deploy > Web app" এর "/exec" দিয়ে শেষ হওয়া ঠিকানাটা এখানে বসান। */
+var EXEC_URL = 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE';
+/* =================================================================== */
+
+var frame = document.getElementById('app');
+// Keep ?verify=... (receipt QR) and any other query string working.
+frame.src = EXEC_URL + (location.search || '');
+
+var deferred = null;           // Chrome's install event
+var appWindow = null;          // the app's window, learned from its first message
+
+function toApp(msg) { try { (appWindow || frame.contentWindow).postMessage(msg, '*'); } catch (e) {} }
+
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  deferred = e;
+  toApp({ type: 'as-wrapper', canInstall: true, url: location.origin });
+});
+window.addEventListener('appinstalled', function () {
+  deferred = null;
+  toApp({ type: 'as-installed' });
+});
+
+window.addEventListener('message', function (ev) {
+  var d = ev.data;
+  if (!d || typeof d !== 'object') return;
+  if (d.type === 'as-hello') {
+    appWindow = ev.source;
+    toApp({ type: 'as-wrapper', canInstall: !!deferred, url: location.origin });
+  } else if (d.type === 'as-install') {
+    if (!deferred) { toApp({ type: 'as-install-unavailable' }); return; }
+    var evt = deferred; deferred = null;
+    evt.prompt();
+    if (evt.userChoice && evt.userChoice.then) {
+      evt.userChoice.then(function (c) { toApp({ type: 'as-install-result', outcome: c && c.outcome }); });
+    }
+  }
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function () { /* ignore */ });
+  });
+}
+</script>
+</body>
+</html>
