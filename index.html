@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AmarSonchoy</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#071430">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AmarSonchoy">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<style>
+  html, body { margin: 0; height: 100%; background: #071430; overflow: hidden; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #071430; }
+
+  /* ---- স্প্ল্যাশ: অ্যাপ আঁকা না হওয়া পর্যন্ত সঙ্গে সঙ্গে দেখায় ---- */
+  #sp { position: fixed; inset: 0; z-index: 1000; background: #071430; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+        transition: opacity .3s ease; font-family: system-ui, -apple-system, "Noto Sans Bengali", sans-serif; color: #cfe9e1; }
+  #sp.off { opacity: 0; pointer-events: none; }
+  #sp img { width: 84px; height: 84px; border-radius: 20px; }
+  #sp .ring { width: 30px; height: 30px; border: 3px solid rgba(16,185,129,.25); border-top-color: #10b981; border-radius: 50%; animation: sps .8s linear infinite; }
+  @keyframes sps { to { transform: rotate(360deg); } }
+
+  /* ---- ইনস্টল ব্যানার ---- */
+  #ib { position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 10px); z-index: 2147483000;
+        max-width: 30rem; margin: 0 auto; background: #fff; color: #0b1b3a; border-radius: 16px; overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: system-ui, -apple-system, "Noto Sans Bengali", sans-serif;
+        transform: translateY(-140%); opacity: 0; transition: transform .35s ease, opacity .35s ease; }
+  #ib.show { transform: translateY(0); opacity: 1; }
+  #ib .row { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; }
+  #ib img { width: 44px; height: 44px; border-radius: 10px; flex: none; }
+  #ib .t { flex: 1; min-width: 0; }
+  #ib .t b { display: block; font-size: 15px; line-height: 1.3; }
+  #ib .t span { display: block; font-size: 12.5px; color: #5b6477; line-height: 1.3; }
+  #ib button { border: 0; font: inherit; cursor: pointer; }
+  #ib .go { background: #047857; color: #fff; font-weight: 700; font-size: 14px; padding: 10px 14px; border-radius: 10px; white-space: nowrap; }
+  #ib .x { background: none; color: #8a93a6; font-size: 22px; line-height: 1; padding: 4px 6px; }
+  #ib .bar { height: 3px; background: #047857; width: 100%; transform-origin: left; }
+  #ib.show .bar { animation: ibbar 6s linear forwards; }
+  @keyframes ibbar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+  /* ---- ইনস্টলের ধাপ (ইভেন্ট না পেলে) ---- */
+  #ig { position: fixed; inset: 0; z-index: 2147483001; background: rgba(0,0,0,.55); display: none; align-items: flex-end; justify-content: center;
+        font-family: system-ui, -apple-system, "Noto Sans Bengali", sans-serif; }
+  #ig.show { display: flex; }
+  #ig .sheet { background: #fff; color: #0b1b3a; width: 100%; max-width: 30rem; border-radius: 18px 18px 0 0; padding: 18px 18px calc(env(safe-area-inset-bottom, 0px) + 18px); }
+  #ig h3 { margin: 0 0 10px; font-size: 17px; }
+  #ig ol { margin: 0 0 14px; padding-left: 20px; font-size: 14.5px; line-height: 1.7; }
+  #ig .ok { width: 100%; border: 0; background: #047857; color: #fff; font-weight: 700; font-size: 15px; padding: 12px; border-radius: 12px; }
+</style>
+</head>
+<body>
+<iframe id="app" title="AmarSonchoy"
+  allow="camera *; microphone *; clipboard-write *; clipboard-read *; fullscreen *; geolocation *"></iframe>
+
+<div id="sp"><img src="icon-192.png" alt=""><div class="ring"></div></div>
+<div id="ib" role="dialog" aria-live="polite">
+  <div class="row">
+    <img src="icon-192.png" alt="">
+    <div class="t"><b>AmarSonchoy ইনস্টল করুন</b><span>হোম স্ক্রিন থেকে অ্যাপের মতো এক ট্যাপে খুলুন</span></div>
+    <button class="go" id="ib-go" type="button">ইনস্টল</button>
+    <button class="x" id="ib-x" type="button" aria-label="বন্ধ করুন">&times;</button>
+  </div>
+  <div class="bar"></div>
+</div>
+<div id="ig"><div class="sheet"><h3 id="ig-h"></h3><ol id="ig-l"></ol><button class="ok" id="ig-ok" type="button">ঠিক আছে</button></div></div>
+
+<script>
+/* ================== শুধু এই একটি লাইন বদলাতে হবে ==================
+   Apps Script "Deploy > Web app" এর "/exec" দিয়ে শেষ হওয়া ঠিকানাটা এখানে বসান। */
+var EXEC_URL = 'https://script.google.com/macros/s/AKfycbw-ad1YVd6zyOjp-039X_fP4lZ6ex_tOi2aqfoQubxrPYFz3BD3j7IGCX8lHgTRNQUuyA/exec';
+/* =================================================================== */
+
+/* ইনস্টল ব্যানার: পাতা খোলার ~১.৫ সেকেন্ড পরে আসে, ৬ সেকেন্ড থাকে, তারপর চলে যায়।
+   অ্যাপ ইনস্টল না হওয়া পর্যন্ত প্রতিবার ভিজিটে আবার আসবে। */
+var BANNER_DELAY_MS = 1500;
+var BANNER_SHOW_MS  = 6000;
+var INSTALLED_KEY   = 'amarsonchoy_installed';
+
+/* ১) সবার আগে সার্ভিস ওয়ার্কার — আগে এটা 'load' ইভেন্টের জন্য অপেক্ষা করত,
+      আর 'load' শুরু হয় ভারী অ্যাপ পুরো লোড হওয়ার পর। তাই ইনস্টল ইভেন্ট অনেক দেরিতে আসত। */
+if ('serviceWorker' in navigator) {
+  try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {}
+}
+
+/* ২) অ্যাপের ফ্রেম */
+var frame = document.getElementById('app');
+frame.src = EXEC_URL + (location.search || '');
+
+var deferred = null;
+var appWindow = null;
+/* স্প্ল্যাশ সরানো: অ্যাপ 'as-ready' পাঠালে, না পাঠালেও iframe লোড হলে বা ১২ সেকেন্ড পরে */
+var sp = document.getElementById('sp');
+function dropSplash() { sp.classList.add('off'); setTimeout(function () { sp.style.display = 'none'; }, 400); }
+frame.addEventListener('load', function () { setTimeout(dropSplash, 600); });
+setTimeout(dropSplash, 12000);
+function toApp(msg) { try { (appWindow || frame.contentWindow).postMessage(msg, '*'); } catch (e) {} }
+
+function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} return null; }
+function isIos() { return /iPad|iPhone|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+function isMobile() { return isIos() || /Android/i.test(navigator.userAgent || ''); }
+function isStandalone() {
+  try { if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true; } catch (e) {}
+  return window.navigator.standalone === true;
+}
+
+var timerPassed = false, shown = false, hideT = null;
+
+function installedCheck(cb) {
+  if (isStandalone()) return cb(true);
+  if (ls(INSTALLED_KEY) === '1') return cb(true);
+  if (navigator.getInstalledRelatedApps) {
+    var done = false;
+    var t = setTimeout(function () { if (!done) { done = true; cb(false); } }, 300);
+    navigator.getInstalledRelatedApps().then(function (a) {
+      if (done) return; done = true; clearTimeout(t); cb(!!(a && a.length));
+    }).catch(function () { if (!done) { done = true; clearTimeout(t); cb(false); } });
+  } else cb(false);
+}
+
+var ib = document.getElementById('ib');
+function hideBanner() { ib.classList.remove('show'); clearTimeout(hideT); }
+function showBanner() {
+  if (shown) return; shown = true;
+  ib.classList.add('show');
+  hideT = setTimeout(hideBanner, BANNER_SHOW_MS);
+}
+function maybeShow() {
+  if (shown || !timerPassed) return;
+  if (!isMobile() && !deferred) return;
+  installedCheck(function (inst) { if (!inst) showBanner(); });
+}
+setTimeout(function () { timerPassed = true; maybeShow(); }, BANNER_DELAY_MS);
+
+function openGuide() {
+  var ios = isIos();
+  document.getElementById('ig-h').textContent = 'হোম স্ক্রিনে যোগ করুন';
+  document.getElementById('ig-l').innerHTML = ios
+    ? '<li>Safari ব্রাউজারে এই পাতাটি খুলুন।</li><li>নিচের <b>শেয়ার</b> বাটনে (বাক্স থেকে ওপরে তীর) চাপ দিন।</li><li>নিচে স্ক্রল করে <b>"Add to Home Screen"</b> চাপুন।</li><li>ডানে ওপরে <b>"Add"</b> চাপুন।</li>'
+    : '<li>Chrome ব্রাউজারে এই পাতাটি খুলুন।</li><li>ডানে ওপরের <b>⋮ (তিন ডট)</b> মেনুতে চাপ দিন।</li><li><b>"Install app"</b> বা <b>"Add to Home screen"</b> চাপুন।</li><li><b>"Install"</b> চাপুন।</li>';
+  document.getElementById('ig').classList.add('show');
+}
+document.getElementById('ig-ok').onclick = function () { document.getElementById('ig').classList.remove('show'); };
+
+function doInstall() {
+  hideBanner();
+  if (deferred) {
+    var evt = deferred; deferred = null;
+    evt.prompt();
+    if (evt.userChoice && evt.userChoice.then) {
+      evt.userChoice.then(function (c) { toApp({ type: 'as-install-result', outcome: c && c.outcome }); });
+    }
+  } else openGuide();
+}
+document.getElementById('ib-go').onclick = doInstall;
+document.getElementById('ib-x').onclick = hideBanner;   // শুধু এই ভিজিটের জন্য বন্ধ; পরের ভিজিটে আবার আসবে
+
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  deferred = e;
+  ls(INSTALLED_KEY, null);          // ইভেন্ট এলে মানে অ্যাপ এখন ইনস্টল করা নেই
+  maybeShow();
+  toApp({ type: 'as-wrapper', canInstall: true, url: location.origin });
+});
+window.addEventListener('appinstalled', function () {
+  deferred = null; ls(INSTALLED_KEY, '1'); hideBanner();
+  toApp({ type: 'as-installed' });
+});
+
+window.addEventListener('message', function (ev) {
+  var d = ev.data;
+  if (!d || typeof d !== 'object') return;
+  if (d.type === 'as-ready') {
+    appWindow = ev.source; dropSplash();
+  } else if (d.type === 'as-hello') {
+    appWindow = ev.source;
+    toApp({ type: 'as-wrapper', canInstall: !!deferred, url: location.origin });
+  } else if (d.type === 'as-install') {
+    doInstall();
+  }
+});
+</script>
+</body>
+</html>
