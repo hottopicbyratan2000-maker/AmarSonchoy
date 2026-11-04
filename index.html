@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AmarSonchoy</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#071430">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AmarSonchoy">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<style>
+  html, body { margin: 0; height: 100%; background: #071430; overflow: hidden; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #071430; }
+  #gate { position: fixed; inset: 0; z-index: 10; display: none; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px; box-sizing: border-box; text-align: center; color: #fff; background: radial-gradient(circle at 50% 0%, #0f2a5e 0%, #071430 60%);
+    font-family: system-ui, -apple-system, "Noto Sans Bengali", "Hind Siliguri", sans-serif; }
+  #gate img { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 8px 30px rgba(0,0,0,.45); }
+  #gate h1 { margin: 18px 0 6px; font-size: 26px; }
+  #gate p { margin: 0 0 22px; opacity: .8; font-size: 15px; line-height: 1.6; max-width: 320px; }
+  #gate button { border: 0; border-radius: 14px; padding: 15px 28px; font-size: 17px; font-weight: 700; color: #071430; background: #ffd24a; width: 100%; max-width: 320px; }
+  #gate .skip { margin-top: 18px; background: none; color: #fff; opacity: .6; font-size: 13px; font-weight: 400; text-decoration: underline; padding: 8px; width: auto; }
+  #help { display: none; margin-top: 18px; max-width: 320px; font-size: 14px; line-height: 1.7; background: rgba(255,255,255,.08); border-radius: 12px; padding: 12px 14px; text-align: left; }
+</style>
+</head>
+<body>
+<div id="gate">
+  <img src="/icon-192.png" alt="AmarSonchoy">
+  <h1>AmarSonchoy</h1>
+  <p>ঋণমুক্ত স্বাধীন জীবন, সঞ্চয়েই স্বপ্ন পূরণ।<br>শুরু করতে আগে অ্যাপটি ডাউনলোড (ইনস্টল) করে নিন।</p>
+  <button id="installBtn" type="button">⬇ অ্যাপ ডাউনলোড করুন</button>
+  <div id="help"></div>
+  <button class="skip" id="skipBtn" type="button">এখন নয়, ব্রাউজারেই চালিয়ে যান</button>
+</div>
+<iframe id="app" title="AmarSonchoy"
+  allow="camera *; microphone *; clipboard-write *; clipboard-read *; fullscreen *; geolocation *"></iframe>
+<script>
+/* ================== শুধু এই একটি লাইন বদলাতে হবে ==================
+   Apps Script "Deploy > Web app" এর "/exec" দিয়ে শেষ হওয়া ঠিকানাটা এখানে বসান। */
+var EXEC_URL = 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE';
+/* =================================================================== */
+
+var frame = document.getElementById('app');
+// Keep ?verify=... (receipt QR) and any other query string working.
+function startApp() {
+  document.getElementById('gate').style.display = 'none';
+  if (!frame.getAttribute('src')) frame.src = EXEC_URL + (location.search || '');
+}
+
+var isStandalone = (window.matchMedia && (matchMedia('(display-mode: standalone)').matches ||
+  matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: minimal-ui)').matches)) ||
+  window.navigator.standalone === true;
+var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+var inAppBrowser = /FBAN|FBAV|Instagram|Line\/|MessengerForiOS|; wv\)/i.test(navigator.userAgent);
+var params = new URLSearchParams(location.search);
+// Receipt-verification links (?verify=...) and installed app open directly; everyone else sees the install gate.
+var skipGate = isStandalone || params.has('verify') || params.has('nogate') ||
+  (function () { try { return sessionStorage.getItem('as-skip-gate') === '1'; } catch (e) { return false; } })();
+
+function showHelp(html) { var h = document.getElementById('help'); h.innerHTML = html; h.style.display = 'block'; }
+
+if (skipGate) {
+  startApp();
+} else {
+  document.getElementById('gate').style.display = 'flex';
+}
+
+document.getElementById('skipBtn').addEventListener('click', function () {
+  try { sessionStorage.setItem('as-skip-gate', '1'); } catch (e) {}
+  startApp();
+});
+
+document.getElementById('installBtn').addEventListener('click', function () {
+  if (deferred) {
+    var evt = deferred; deferred = null;
+    evt.prompt();
+    evt.userChoice.then(function (c) {
+      if (c && c.outcome === 'accepted') {
+        showHelp('✅ ডাউনলোড হচ্ছে। শেষ হলে হোম স্ক্রিন / অ্যাপ লিস্ট থেকে <b>AmarSonchoy</b> খুলুন।');
+      } else {
+        showHelp('ডাউনলোড বাতিল হয়েছে। আবার বাটনে চাপ দিন।');
+      }
+    });
+  } else if (isIOS) {
+    showHelp('iPhone/iPad এ: <b>Safari</b> তে নিচের <b>Share (⬆)</b> বাটন চাপুন → <b>Add to Home Screen</b> → <b>Add</b>।');
+  } else if (inAppBrowser) {
+    showHelp('এই ব্রাউজারে ইনস্টল হয় না। উপরের <b>⋮</b> মেনু থেকে <b>Chrome এ খুলুন</b>, তারপর আবার চেষ্টা করুন।');
+  } else {
+    showHelp('Chrome এর উপরের ডানে <b>⋮</b> মেনু চাপুন → <b>Install app</b> / <b>Add to Home screen</b> চাপুন।<br>(সঙ্গে সঙ্গে না এলে পেজটা একবার রিফ্রেশ করে ১০ সেকেন্ড পরে আবার চাপুন।)');
+  }
+});
+
+var deferred = null;           // Chrome's install event
+var appWindow = null;          // the app's window, learned from its first message
+
+function toApp(msg) { try { (appWindow || frame.contentWindow).postMessage(msg, '*'); } catch (e) {} }
+
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  deferred = e;
+  toApp({ type: 'as-wrapper', canInstall: true, url: location.origin });
+});
+window.addEventListener('appinstalled', function () {
+  deferred = null;
+  showHelp('✅ ইনস্টল হয়েছে! এখন হোম স্ক্রিন / অ্যাপ লিস্ট থেকে <b>AmarSonchoy</b> খুলুন।');
+  toApp({ type: 'as-installed' });
+});
+
+window.addEventListener('message', function (ev) {
+  var d = ev.data;
+  if (!d || typeof d !== 'object') return;
+  if (d.type === 'as-hello') {
+    appWindow = ev.source;
+    toApp({ type: 'as-wrapper', canInstall: !!deferred, url: location.origin });
+  } else if (d.type === 'as-install') {
+    if (!deferred) { toApp({ type: 'as-install-unavailable' }); return; }
+    var evt = deferred; deferred = null;
+    evt.prompt();
+    if (evt.userChoice && evt.userChoice.then) {
+      evt.userChoice.then(function (c) { toApp({ type: 'as-install-result', outcome: c && c.outcome }); });
+    }
+  }
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function () { /* ignore */ });
+  });
+}
+</script>
+</body>
+</html>
